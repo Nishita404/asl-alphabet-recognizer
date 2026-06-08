@@ -17,12 +17,12 @@ __pycache__/
 # Dataset Files
 # =========================
 asl-alphabet.zip
-asl_alphabet_train/
-asl_alphabet_test/
-asl_dataset/
+asl-alphabet/
 
+# =========================
 # Generated Landmark Data
-data/asl_landmarks.csv
+# =========================
+data/landmarks.csv
 
 # =========================
 # Trained Models
