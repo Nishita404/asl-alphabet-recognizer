@@ -1,9 +1,9 @@
-tensorflow-cpu==2.13.0
-mediapipe==0.10.9
-opencv-python-headless==4.8.0.76
+tensorflow==2.19.0
+mediapipe==0.10.21
+opencv-python-headless
 streamlit
 streamlit-webrtc
-numpy==1.24.3
+numpy
 scikit-learn
 pandas
 gdown
