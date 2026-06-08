@@ -13,15 +13,19 @@ import av
 MODEL_PATH  = "model/asl_model.keras"
 LABELS_PATH = "model/label_classes.json"
 
+import urllib.request
+
 if not os.path.exists(MODEL_PATH):
     os.makedirs("model", exist_ok=True)
-    st.info("Downloading model... please wait.")
-    gdown.download(
-        "https://drive.google.com/uc?id=YOUR_FILE_ID",  # ← replace this
-        MODEL_PATH,
-        quiet=False
-    )
-
+    with st.spinner("Downloading model... please wait."):
+        urllib.request.urlretrieve(
+            "https://huggingface.co/nishita-s/asl-alphabet-recognizer/resolve/main/asl_model.keras",
+            MODEL_PATH
+        )
+        urllib.request.urlretrieve(
+            "https://huggingface.co/nishita-s/asl-alphabet-recognizer/resolve/main/label_classes.json",
+            LABELS_PATH
+        )
 # --- Page Config ---
 st.set_page_config(
     page_title="ASL Recognizer",
