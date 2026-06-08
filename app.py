@@ -7,14 +7,12 @@ import cv2
 from streamlit_webrtc import webrtc_streamer, VideoTransformerBase, RTCConfiguration
 import av
 
-# --- Page Config ---
 st.set_page_config(
     page_title="ASL Recognizer",
     page_icon="🤟",
     layout="wide"
 )
 
-# --- Custom CSS ---
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;700;900&family=Instrument+Serif:ital@0;1&display=swap');
@@ -170,7 +168,6 @@ html, body, [data-testid="stAppViewContainer"],
     opacity: 0.65;
 }
 
-/* ASL grid */
 .asl-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
@@ -231,7 +228,6 @@ html, body, [data-testid="stAppViewContainer"],
     padding: 0.35rem 1rem;
     text-decoration: none !important;
 }
-
 [data-testid="stNotification"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
@@ -259,58 +255,77 @@ class ASLTransformer(VideoTransformerBase):
             min_detection_confidence=0.7,
             min_tracking_confidence=0.5
         )
+        self.frame_count = 0       # counts frames
+        self.last_label  = ""      # cache last prediction
+        self.last_conf   = 0.0     # cache last confidence
+        self.PREDICT_EVERY = 3     # only predict every 3rd frame
 
     def recv(self, frame):
         img = frame.to_ndarray(format="bgr24")
         img = cv2.flip(img, 1)
-        rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        results = self.hands.process(rgb)
+
+        # --- Resize to 640x480 for speed ---
+        img = cv2.resize(img, (640, 480))
         h, w, _ = img.shape
+
+        rgb     = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        results = self.hands.process(rgb)
+
+        self.frame_count += 1
 
         if results.multi_hand_landmarks:
             hand = results.multi_hand_landmarks[0]
+
+            # Draw landmarks
             mp_draw.draw_landmarks(
                 img, hand, mp_hands.HAND_CONNECTIONS,
                 mp_draw.DrawingSpec(color=(245,196,0), thickness=2, circle_radius=4),
                 mp_draw.DrawingSpec(color=(255,255,255), thickness=2)
             )
-            row = []
-            for lm in hand.landmark:
-                row += [lm.x, lm.y, lm.z]
 
-            preds      = model.predict(np.array([row]), verbose=0)
-            idx        = int(np.argmax(preds))
-            confidence = float(np.max(preds))
-            label      = label_classes[idx]
+            # Only run model every Nth frame
+            if self.frame_count % self.PREDICT_EVERY == 0:
+                row = []
+                for lm in hand.landmark:
+                    row += [lm.x, lm.y, lm.z]
 
-            cv2.rectangle(img, (0, h-95), (w, h), (13,13,13), -1)
-            cv2.putText(img, label,
-                (18, h-22), cv2.FONT_HERSHEY_DUPLEX, 2.4, (245,196,0), 3)
-            cv2.putText(img, f"{confidence*100:.0f}%  confidence",
-                (18, h-6), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (200,200,200), 1)
+                input_arr      = np.array([row], dtype=np.float32)
+                preds          = model(input_arr, training=False).numpy()  # faster than model.predict
+                idx            = int(np.argmax(preds))
+                self.last_conf  = float(np.max(preds))
+                self.last_label = label_classes[idx]
+
+            # Draw cached prediction
+            if self.last_label:
+                cv2.rectangle(img, (0, h-95), (w, h), (13,13,13), -1)
+                cv2.putText(img, self.last_label,
+                    (18, h-22), cv2.FONT_HERSHEY_DUPLEX,
+                    2.4, (245,196,0), 3)
+                cv2.putText(img, f"{self.last_conf*100:.0f}%  confidence",
+                    (18, h-6), cv2.FONT_HERSHEY_SIMPLEX,
+                    0.52, (200,200,200), 1)
         else:
+            self.last_label = ""
+            self.last_conf  = 0.0
             cv2.rectangle(img, (0, h-50), (w, h), (13,13,13), -1)
             cv2.putText(img, "Show your hand to the camera",
-                (18, h-16), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (130,130,130), 1)
+                (18, h-16), cv2.FONT_HERSHEY_SIMPLEX,
+                0.6, (130,130,130), 1)
 
         return av.VideoFrame.from_ndarray(img, format="bgr24")
 
-# --- RTC Config (fixes streaming/freezing) ---
+# --- RTC Config ---
 RTC_CONFIG = RTCConfiguration({
     "iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]
 })
 
-# ═══════════════════════════════════════
-#  UI
-# ═══════════════════════════════════════
+# ═══════ UI ═══════
 
 st.markdown("""
 <div class="hero-wrap">
   <div class="hero-eyebrow">Computer Vision · Real-Time Detection · Python</div>
   <div class="hero-title">
-    ASL<br>
-    <span class="acc">Alpha</span>BET<br>
-    RECOGNIZER
+    ASL<br><span class="acc">Alpha</span>BET<br>RECOGNIZER
   </div>
   <div class="hero-sub">MediaPipe &nbsp;·&nbsp; TensorFlow &nbsp;·&nbsp; Streamlit &nbsp;·&nbsp; 29 Signs</div>
 </div>
@@ -318,22 +333,10 @@ st.markdown("""
 
 st.markdown("""
 <div class="stats-row">
-  <div class="stat-box">
-    <div class="stat-num">98<span class="acc">%</span></div>
-    <div class="stat-lbl">Test Accuracy</div>
-  </div>
-  <div class="stat-box">
-    <div class="stat-num">29</div>
-    <div class="stat-lbl">Sign Classes</div>
-  </div>
-  <div class="stat-box">
-    <div class="stat-num">21</div>
-    <div class="stat-lbl">Hand Landmarks</div>
-  </div>
-  <div class="stat-box">
-    <div class="stat-num">63</div>
-    <div class="stat-lbl">Input Features</div>
-  </div>
+  <div class="stat-box"><div class="stat-num">98<span class="acc">%</span></div><div class="stat-lbl">Test Accuracy</div></div>
+  <div class="stat-box"><div class="stat-num">29</div><div class="stat-lbl">Sign Classes</div></div>
+  <div class="stat-box"><div class="stat-num">21</div><div class="stat-lbl">Hand Landmarks</div></div>
+  <div class="stat-box"><div class="stat-num">63</div><div class="stat-lbl">Input Features</div></div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -344,52 +347,45 @@ webrtc_streamer(
     key="asl-recognizer",
     video_transformer_factory=ASLTransformer,
     rtc_configuration=RTC_CONFIG,
-    media_stream_constraints={"video": True, "audio": False},
+    media_stream_constraints={
+        "video": {"width": 640, "height": 480, "frameRate": 30},
+        "audio": False
+    },
     async_transform=False
 )
 
 st.markdown("""
 <div class="tips-grid">
-  <div class="tip-cell">
-    <div class="tip-icon">💡</div>
-    <div class="tip-txt">Good lighting on your hand</div>
-  </div>
-  <div class="tip-cell">
-    <div class="tip-icon">✋</div>
-    <div class="tip-txt">Keep hand fully in frame</div>
-  </div>
-  <div class="tip-cell">
-    <div class="tip-icon">🎯</div>
-    <div class="tip-txt">Plain background works best</div>
-  </div>
+  <div class="tip-cell"><div class="tip-icon">💡</div><div class="tip-txt">Good lighting on your hand</div></div>
+  <div class="tip-cell"><div class="tip-icon">✋</div><div class="tip-txt">Keep hand fully in frame</div></div>
+  <div class="tip-cell"><div class="tip-icon">🎯</div><div class="tip-txt">Plain background works best</div></div>
 </div>
 """, unsafe_allow_html=True)
 
-# ASL Reference — built with HTML instead of external image
 st.markdown('<div class="sec-label">— ASL Alphabet Reference</div>', unsafe_allow_html=True)
 
 asl_hints = {
-    "A": "Fist, thumb side", "B": "Flat hand, fingers up",
-    "C": "Curved hand", "D": "Index up, others curl",
-    "E": "Fingers bent", "F": "OK-ish shape",
+    "A": "Fist, thumb side", "B": "Flat hand up",
+    "C": "Curved hand", "D": "Index up, curl",
+    "E": "Fingers bent", "F": "OK shape",
     "G": "Index points side", "H": "Two fingers side",
     "I": "Pinky up", "J": "Pinky + draw J",
     "K": "Index + middle up", "L": "L shape",
     "M": "Three fingers down", "N": "Two fingers down",
     "O": "O shape", "P": "K pointing down",
     "Q": "G pointing down", "R": "Fingers crossed",
-    "S": "Fist, thumb front", "T": "Thumb between fingers",
+    "S": "Fist, thumb front", "T": "Thumb in fist",
     "U": "Two fingers together", "V": "Peace sign",
     "W": "Three fingers up", "X": "Index hook",
     "Y": "Hang loose", "Z": "Draw Z",
-    "DEL": "↩ gesture", "NOTHING": "No sign", "SPACE": "Flat open"
+    "del": "↩ gesture", "nothing": "No sign", "space": "Flat open"
 }
 
 cells = ""
 for letter, hint in asl_hints.items():
     cells += f"""
     <div class="asl-cell">
-        <div class="asl-letter">{letter}</div>
+        <div class="asl-letter">{letter.upper()}</div>
         <div class="asl-desc">{hint}</div>
     </div>"""
 
@@ -398,8 +394,6 @@ st.markdown(f'<div class="asl-grid">{cells}</div>', unsafe_allow_html=True)
 st.markdown("""
 <div class="footer-bar">
   <div class="footer-l">Built by Nishita · 2025</div>
-  <a class="footer-badge" href="https://github.com/Nishita404/asl-alphabet-recognizer" target="_blank">
-    GitHub ↗
-  </a>
+  <a class="footer-badge" href="https://github.com/Nishita404/asl-alphabet-recognizer" target="_blank">GitHub ↗</a>
 </div>
 """, unsafe_allow_html=True)
