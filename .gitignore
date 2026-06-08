@@ -1,0 +1,32 @@
+# Dataset
+asl_dataset/
+
+# Generated training data
+data/asl_landmarks.csv
+
+# Trained models
+model/
+*.keras
+*.h5
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit
+.streamlit/secrets.toml
