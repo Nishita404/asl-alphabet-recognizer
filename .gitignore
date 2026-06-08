@@ -1,32 +1,64 @@
-# Dataset
+# =========================
+# Virtual Environments
+# =========================
+venv/
+env/
+.venv/
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# =========================
+# Dataset Files
+# =========================
+asl-alphabet.zip
+asl_alphabet_train/
+asl_alphabet_test/
 asl_dataset/
 
-# Generated training data
+# Generated Landmark Data
 data/asl_landmarks.csv
 
-# Trained models
+# =========================
+# Trained Models
+# =========================
 model/
 *.keras
 *.h5
 
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-.env
-venv/
-env/
-
+# =========================
 # Jupyter
+# =========================
 .ipynb_checkpoints/
 
+# =========================
 # IDEs
+# =========================
 .vscode/
 .idea/
 
-# OS
+# =========================
+# Environment Variables
+# =========================
+.env
+
+# =========================
+# Streamlit
+# =========================
+.streamlit/secrets.toml
+
+# =========================
+# OS Files
+# =========================
 .DS_Store
 Thumbs.db
 
-# Streamlit
-.streamlit/secrets.toml
+# =========================
+# Logs
+# =========================
+*.log
