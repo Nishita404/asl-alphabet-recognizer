@@ -27,9 +27,8 @@ data/landmarks.csv
 # =========================
 # Trained Models
 # =========================
-model/
-*.keras
-*.h5
+model/*.keras
+model/*.h5
 
 # =========================
 # Jupyter
@@ -48,7 +47,7 @@ model/
 .env
 
 # =========================
-# Streamlit
+# Streamlit Secrets
 # =========================
 .streamlit/secrets.toml
 
