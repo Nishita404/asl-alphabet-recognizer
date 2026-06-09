@@ -1,5 +1,5 @@
-tensorflow==2.19.0
-mediapipe==0.10.21
+Set-Content requirements.txt "tensorflow
+mediapipe==0.10.14
 opencv-python-headless
 streamlit
 streamlit-webrtc
@@ -7,4 +7,4 @@ numpy
 scikit-learn
 pandas
 gdown
-av
+av"
