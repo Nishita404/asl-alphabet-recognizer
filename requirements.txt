@@ -1,4 +1,4 @@
-Set-Content requirements.txt "tensorflow
+tensorflow
 mediapipe==0.10.14
 opencv-python-headless
 streamlit
@@ -7,4 +7,4 @@ numpy
 scikit-learn
 pandas
 gdown
-av"
+av
